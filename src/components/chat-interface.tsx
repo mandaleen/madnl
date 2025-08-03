@@ -1,9 +1,13 @@
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle } from "lucide-react";
 import { AIChatInput } from "@/components/ui/ai-chat-input";
 import { ChatBubble } from "@/components/ui/chat-bubble";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useOpenAI } from "@/hooks/useOpenAI";
 
 interface Message {
   id: string;
@@ -11,15 +15,6 @@ interface Message {
   isUser: boolean;
   timestamp: Date;
 }
-
-const AI_RESPONSES = [
-  "That's a fascinating question! Let me think about that for a moment...",
-  "I'd be happy to help you with that. Here's what I think...",
-  "Great point! From my perspective, I would say...",
-  "That's an interesting way to look at it. Here's my take...",
-  "I appreciate you asking that. Let me share my thoughts...",
-  "Excellent question! I think the key here is...",
-];
 
 interface ChatInterfaceProps {
   currentChatId: string;
@@ -35,9 +30,22 @@ const ChatInterface = ({ currentChatId }: ChatInterfaceProps) => {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState("");
+  const [currentStreamingId, setCurrentStreamingId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { state: sidebarState } = useSidebar();
+  
+  const { 
+    generateStreamResponse, 
+    isLoading, 
+    error, 
+    clearError,
+    clearConversation 
+  } = useOpenAI({ 
+    conversationId: currentChatId,
+    userName: "User",
+    streaming: true 
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,38 +53,56 @@ const ChatInterface = ({ currentChatId }: ChatInterfaceProps) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages, isTyping, streamingMessage]);
 
+  // Reset messages when chat changes
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+    setMessages([
+      {
+        id: `welcome-${currentChatId}`,
+        text: "Hello! I'm your AI assistant powered by OpenAI. How can I help you today?",
+        isUser: false,
+        timestamp: new Date(),
+      },
+    ]);
+    setIsTyping(false);
+    setStreamingMessage("");
+    setCurrentStreamingId(null);
+    clearError();
+  }, [currentChatId, clearError]);
 
-  const simulateAIResponse = (userMessage: string) => {
+  const handleAIResponse = async (userMessage: string) => {
     setIsTyping(true);
+    setStreamingMessage("");
+    const streamingId = Date.now().toString() + "-ai-streaming";
+    setCurrentStreamingId(streamingId);
     
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    // Simulate AI thinking time
-    timeoutRef.current = setTimeout(() => {
-      const randomResponse = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
+    try {
+      let fullResponse = "";
+      
+      await generateStreamResponse(userMessage, (chunk: string) => {
+        fullResponse += chunk;
+        setStreamingMessage(fullResponse);
+      });
+      
+      // Add the complete message to the messages array
       const aiMessage: Message = {
-        id: Date.now().toString() + "-ai",
-        text: randomResponse,
+        id: streamingId,
+        text: fullResponse,
         isUser: false,
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, aiMessage]);
+      setStreamingMessage("");
+      setCurrentStreamingId(null);
       setIsTyping(false);
-      timeoutRef.current = null;
-    }, 1500 + Math.random() * 1000); // Random delay between 1.5-2.5 seconds
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      setIsTyping(false);
+      setStreamingMessage("");
+      setCurrentStreamingId(null);
+    }
   };
 
   const handleSendMessage = (text: string) => {
@@ -88,37 +114,86 @@ const ChatInterface = ({ currentChatId }: ChatInterfaceProps) => {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    simulateAIResponse(text);
+    handleAIResponse(text);
+  };
+
+  const handleRetry = () => {
+    clearError();
+  };
+
+  const handleClearConversation = () => {
+    clearConversation();
+    setMessages([
+      {
+        id: `welcome-${currentChatId}-new`,
+        text: "Hello! I'm your AI assistant powered by OpenAI. How can I help you today?",
+        isUser: false,
+        timestamp: new Date(),
+      },
+    ]);
   };
 
   return (
     <div className="flex flex-col h-full w-full relative">
+      {/* Error Alert */}
+      {error && (
+        <div className="px-4 md:px-8 pt-4">
+          <div className="max-w-4xl mx-auto">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>{error}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRetry}
+                  className="ml-2"
+                >
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      )}
+      
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide min-h-0 px-4 md:px-8 py-6 pb-32">
         <div className="max-w-4xl mx-auto w-full space-y-4">
-        <AnimatePresence initial={false}>
-          {messages.map((message) => (
+          <AnimatePresence initial={false}>
+            {messages.map((message) => (
+              <ChatBubble
+                key={message.id}
+                message={message.text}
+                isUser={message.isUser}
+                timestamp={message.timestamp}
+              />
+            ))}
+          </AnimatePresence>
+          
+          {/* Streaming Message */}
+          {currentStreamingId && streamingMessage && (
             <ChatBubble
-              key={message.id}
-              message={message.text}
-              isUser={message.isUser}
-              timestamp={message.timestamp}
-            />
-          ))}
-        </AnimatePresence>
-        
-        {/* Typing Indicator */}
-        <AnimatePresence>
-          {isTyping && (
-            <ChatBubble
-              message=""
+              key={currentStreamingId}
+              message={streamingMessage}
               isUser={false}
-              isTyping={true}
+              timestamp={new Date()}
+              isStreaming={true}
             />
           )}
-        </AnimatePresence>
-        
-        <div ref={messagesEndRef} />
+          
+          {/* Typing Indicator */}
+          <AnimatePresence>
+            {isTyping && !streamingMessage && (
+              <ChatBubble
+                message=""
+                isUser={false}
+                isTyping={true}
+              />
+            )}
+          </AnimatePresence>
+          
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
@@ -136,7 +211,11 @@ const ChatInterface = ({ currentChatId }: ChatInterfaceProps) => {
         transition={{ duration: 0.6, delay: 0.3 }}
       >
         <div className="pointer-events-auto w-full max-w-4xl mx-auto">
-          <AIChatInput onSendMessage={handleSendMessage} />
+          <AIChatInput 
+            onSendMessage={handleSendMessage} 
+            disabled={isLoading}
+            onClearConversation={handleClearConversation}
+          />
         </div>
       </motion.div>
     </div>

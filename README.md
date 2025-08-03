@@ -1,5 +1,89 @@
 # Welcome to your Lovable project
 
+## AI Chat Assistant with OpenAI Integration
+
+A production-ready AI chat application built with React, TypeScript, and OpenAI API integration featuring real-time streaming responses, conversation memory, and a modern glass-morphism UI.
+
+### Features
+
+- 🤖 **OpenAI Integration**: Powered by GPT-4o-mini with streaming responses
+- 💬 **Real-time Chat**: Streaming responses with typing indicators
+- 🧠 **Memory Management**: Conversation context and history preservation
+- 🎨 **Modern UI**: Glass-morphism design with dark/light theme support
+- 📱 **Responsive Design**: Works seamlessly on desktop and mobile
+- ⚡ **Performance Optimized**: Efficient token usage and error handling
+- 🔒 **Error Boundaries**: Robust error handling and recovery
+- 🎯 **Production Ready**: Environment configuration and validation
+
+### Setup Instructions
+
+1. **Clone and Install**
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd <YOUR_PROJECT_NAME>
+   npm install
+   ```
+
+2. **Environment Configuration**
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_OPENAI_API_KEY=your_openai_api_key_here
+   VITE_OPENAI_MODEL=gpt-4o-mini
+   VITE_OPENAI_MAX_TOKENS=2000
+   VITE_OPENAI_TEMPERATURE=0.7
+   ```
+
+3. **Get OpenAI API Key**
+   - Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+   - Create a new API key
+   - Add it to your `.env` file
+
+4. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
+
+### Configuration Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_OPENAI_API_KEY` | - | Your OpenAI API key (required) |
+| `VITE_OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model to use |
+| `VITE_OPENAI_MAX_TOKENS` | `2000` | Maximum tokens per response |
+| `VITE_OPENAI_TEMPERATURE` | `0.7` | Response creativity (0-2) |
+
+### Architecture
+
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI Framework**: shadcn/ui + Tailwind CSS
+- **State Management**: React hooks + Context
+- **AI Integration**: OpenAI API with streaming
+- **Animations**: Framer Motion
+- **Theme**: next-themes for dark/light mode
+
+### Key Components
+
+- `OpenAIService`: Handles API communication and conversation memory
+- `ChatInterface`: Main chat UI with streaming support
+- `AIChatInput`: Advanced input with placeholder animations
+- `ChatBubble`: Message display with typing indicators
+- `ErrorBoundary`: Application-wide error handling
+
+### Production Deployment
+
+1. **Build the application**
+   ```bash
+   npm run build
+   ```
+
+2. **Environment Variables**
+   Ensure all required environment variables are set in your deployment platform
+
+3. **Security Considerations**
+   - API keys are exposed in the browser (for demo purposes)
+   - For production, implement a backend proxy to secure API keys
+   - Consider rate limiting and user authentication
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/12660796-ec9d-4b7e-b779-d83f3844aef4

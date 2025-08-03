@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useRef } from "react";
-import { Building2, Plane, Car, MapPin, Paperclip, Send, Mic } from "lucide-react";
+import { Building2, Plane, Car, MapPin, Paperclip, Send, Mic, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const PLACEHOLDERS = [
@@ -16,9 +16,11 @@ const PLACEHOLDERS = [
 
 interface AIChatInputProps {
   onSendMessage?: (message: string) => void;
+  disabled?: boolean;
+  onClearConversation?: () => void;
 }
 
-const AIChatInput = ({ onSendMessage }: AIChatInputProps) => {
+const AIChatInput = ({ onSendMessage, disabled = false, onClearConversation }: AIChatInputProps) => {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
   const [isActive, setIsActive] = useState(false);
@@ -62,7 +64,7 @@ const AIChatInput = ({ onSendMessage }: AIChatInputProps) => {
   const handleActivate = () => setIsActive(true);
   
   const handleSend = () => {
-    if (inputValue.trim() && onSendMessage) {
+    if (inputValue.trim() && onSendMessage && !disabled) {
       onSendMessage(inputValue.trim());
       setInputValue("");
       setIsActive(false);
@@ -72,7 +74,7 @@ const AIChatInput = ({ onSendMessage }: AIChatInputProps) => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (!disabled) handleSend();
     }
   };
 
@@ -152,9 +154,10 @@ const AIChatInput = ({ onSendMessage }: AIChatInputProps) => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="flex-1 border-0 outline-0 rounded-md py-2 text-base bg-transparent w-full font-normal text-foreground placeholder:text-muted-foreground"
+              className="flex-1 border-0 outline-0 rounded-md py-2 text-base bg-transparent w-full font-normal text-foreground placeholder:text-muted-foreground disabled:opacity-50"
               style={{ position: "relative", zIndex: 1 }}
               onFocus={handleActivate}
+              disabled={disabled}
             />
             <div className="absolute left-0 top-0 w-full h-full pointer-events-none flex items-center px-3 py-2">
               <AnimatePresence mode="wait">
@@ -203,9 +206,9 @@ const AIChatInput = ({ onSendMessage }: AIChatInputProps) => {
             title="Send"
             type="button"
             onClick={handleSend}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || disabled}
           >
-            <Send size={18} />
+            <Send size={18} className={disabled ? "animate-pulse" : ""} />
           </button>
         </div>
 
@@ -231,6 +234,19 @@ const AIChatInput = ({ onSendMessage }: AIChatInputProps) => {
           style={{ marginTop: 8 }}
         >
           <div className="flex gap-3 items-center flex-wrap">
+            {/* Clear Conversation Button */}
+            {onClearConversation && (
+              <button
+                className="flex items-center gap-2 px-4 py-2 rounded-full transition-all font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20"
+                title="Clear Conversation"
+                type="button"
+                onClick={onClearConversation}
+              >
+                <Trash2 size={16} />
+                Clear
+              </button>
+            )}
+            
             {/* Hotels Toggle */}
             <button
               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all font-medium group ${
